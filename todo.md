@@ -1,0 +1,25 @@
+- [ ] data types
+	- [x] integer
+	- [x] decimal
+	- [x] lambda
+	- [ ] string  <!-- " " -->
+	- [ ] arrays  <!-- '() -->
+- [ ] storage
+	- [x] constants
+	- [ ] bindings
+- [ ] infix operations
+	- [x] arithmetic
+	- [x] compare
+	- [ ] array
+- [x] [] and {}
+	- [x] integer part of number ([])
+	- [x] rational part of number ({})
+- [ ] branching
+	- [x] match-case       <!-- ${}   -->
+	- [ ] ternary operator <!-- c?t:f -->
+- [ ] I/O
+	- [x] print <!-- ! -->
+	- [ ] input
+	- [ ] fileread
+	- [ ] filewrite
+- [ ] extensions
