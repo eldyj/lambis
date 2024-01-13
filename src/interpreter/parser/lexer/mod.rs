@@ -11,6 +11,7 @@ pub enum Token {
 	OpenBracket,   // [
 	CloseBracket,  // ]
 	Exclam,        // !
+	Bar,           // |
 
 	Underscore,    // _
 	Plus,          // +
@@ -187,6 +188,7 @@ impl LexableExt<'_> for Lexable<'_> {
 					'(' => Token::OpenParen,
 					')' => Token::CloseParen,
 					'λ'|'\\' => Token::Lambda,
+					'|' => Token::Bar,
 					'→' => Token::Arrow,
 					 _  => panic!("LexError: what the fuck is {}", ch),
 				});

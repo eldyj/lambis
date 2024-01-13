@@ -1,16 +1,14 @@
 mod interpreter;
+use std::{fs, env::args};
 
 fn main() {
-	interpreter::eval_start("
-		int = λx. [x].
-		floor = λx. x - {x}.
+	let argv: &mut dyn Iterator<Item=String> = &mut args();
+	let program: String = argv.next().unwrap();
+	let Some(file) = argv.next() else {
+		panic!("Usage: {} <file>", program)
+	};
 
-		factorial = λx.
-			x $ {
-				0 -> 1
-				x -> (factorial x-1)*x
-			}.
-
-		! (factorial 10)".to_string()
-	);
+	interpreter::eval_start(
+		fs::read_to_string(file.clone())
+			.expect(format!("failed to open file {}", file).as_str()));
 }

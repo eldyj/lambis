@@ -16,9 +16,8 @@
 - [x] [] and {}
 	- [x] integer part of number ([])
 	- [x] rational part of number ({})
-- [ ] branching
-	- [x] match-case       <!-- ${}   -->
-	- [ ] ternary operator <!-- c?t:f -->
+- [x] branching
+	- [x] match-case       <!-- ${} -->
 - [ ] I/O
 	- [x] print <!-- ! -->
 	- [ ] input
