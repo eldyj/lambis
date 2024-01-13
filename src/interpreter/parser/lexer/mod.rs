@@ -186,7 +186,7 @@ impl LexableExt<'_> for Lexable<'_> {
 					'}' => Token::CloseBrace,
 					'(' => Token::OpenParen,
 					')' => Token::CloseParen,
-					'λ' => Token::Lambda,
+					'λ'|'\\' => Token::Lambda,
 					'→' => Token::Arrow,
 					 _  => panic!("LexError: what the fuck is {}", ch),
 				});
