@@ -251,7 +251,9 @@ impl Parseable {
 				self.consume(lexer::Token::CloseParen);
 
 				let res: ASTNode = if let ASTNode::Value(ref value) = result {
-					if let Value::Lambda(_, _) = value {
+					if from_call {
+						result
+					} else if let Value::Lambda(_, _) = value {
 						let mut args: Vec<ASTNode> = vec![];
 
 						while !self.is_empty()
@@ -347,7 +349,10 @@ impl Parseable {
 				} else {
 					let mut args: Vec<ASTNode> = vec![];
 
-					while !self.is_empty() && !self.is_delimiter() && !self.is_operation() {
+					while !self.is_empty()
+					&& !self.is_delimiter()
+					&& !self.is_operation()
+					&& self.peek() != Some(lexer::Token::Period) {
 						args.push(self.parse_expression(true, true));
 					}
 
@@ -366,6 +371,10 @@ impl Parseable {
 						} else if !from_call && token == lexer::Token::Dollar {
 							self.parse_switch(result)
 						} else {
+							if token == lexer::Token::Period {
+								self.consume(lexer::Token::Period);
+							}
+
 							result
 						}
 					} else {
