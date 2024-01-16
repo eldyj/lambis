@@ -1,0 +1,29 @@
+##
+switch-case stateements are denoted by
+```
+value ${
+	case1 -> action1
+	case2 -> action2
+	caseN -> actionN
+}
+```
+for default branch just directly insert `value` in case
+
+example of case:
+##
+
+myFunc = (λx. x ${
+	10 -> 5
+	5  -> 10
+	x -> 69
+}).
+
+##
+myFunc returns 5 when 10 is passed
+10 when 5 is passed
+and 69 when x is not 5 or 10
+##
+
+! (myFunc 10)
+! (myFunc 5)
+! (myFunc 420)

@@ -1,0 +1,11 @@
+##
+linear comments are denoted by single hash char
+multi-linear comments are denoted by sequence of opening 2 hashes and closing 2 hashes
+##
+
+# linear comment
+##
+milti-
+linear
+comment
+##

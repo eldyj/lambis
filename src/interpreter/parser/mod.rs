@@ -295,7 +295,7 @@ impl Parseable {
 				self.consume(lexer::Token::Lambda);
 				let mut variables: String = self.consume_ident();
 				self.consume(lexer::Token::Period);
-				let mut body: Box<ASTNode> = Box::new(self.parse_expression(true, true));
+				let mut body: Box<ASTNode> = Box::new(self.parse_expression(false, true));
 
 				if let ASTNode::Value(value) = *body.clone() {
 					if let Value::Lambda(vars, content) = value {

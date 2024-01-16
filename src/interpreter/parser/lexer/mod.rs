@@ -37,6 +37,8 @@ pub enum Token {
 trait LexableExt<'a> {
 	fn lex_ident(&mut self) -> Token;
 	fn lex_integer(&mut self) -> Token;
+	fn lex_multiline_comment(&mut self) -> ();
+	fn lex_comment(&mut self) -> ();
 	fn lex_spaces(&mut self) -> ();
 	fn lex(&mut self) -> Vec<Token>;
 }
@@ -83,6 +85,33 @@ impl LexableExt<'_> for Lexable<'_> {
 		}
 	}
 
+	fn lex_multiline_comment(&mut self) -> () {
+		while let Some(&ch) = self.peek() {
+			let _: Option<char> = self.next();
+			if ch == '#' {
+				if self.peek() == Some(&'#') {
+					let _: Option<char> = self.next();
+					break
+				}
+			}
+		}
+	}
+
+	fn lex_comment(&mut self) -> () {
+		let _: Option<char> = self.next();
+		if self.peek() == Some(&'#') {
+			self.lex_multiline_comment();
+		} else {
+			while let Some(&ch) = self.peek() {
+				if ch == '\n' {
+					break
+				}
+
+				let _: Option<char> = self.next();
+			}
+		}
+	}
+
 	fn lex(&mut self) -> Vec<Token> {
 		let mut result: Vec<Token> = vec![];
 
@@ -93,11 +122,12 @@ impl LexableExt<'_> for Lexable<'_> {
 				result.push(self.lex_ident());
 			} else if check::is_numeric(ch) {
 				result.push(self.lex_integer());
+			} else if ch == '#' {
+				self.lex_comment();
 			} else {
 				result.push(match ch {
 					'$' => Token::Dollar,
 					'.' => Token::Period,
-
 					'<' => {
 						let mut clone: Lexable = self.clone();
 						let _: Option<char> = clone.next();
