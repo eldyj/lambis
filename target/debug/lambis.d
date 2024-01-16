@@ -1,1 +1,0 @@
-/home/lukas/new_proj/lambis/target/debug/lambis: /home/lukas/new_proj/lambis/src/interpreter/mod.rs /home/lukas/new_proj/lambis/src/interpreter/parser/lexer/check.rs /home/lukas/new_proj/lambis/src/interpreter/parser/lexer/mod.rs /home/lukas/new_proj/lambis/src/interpreter/parser/mod.rs /home/lukas/new_proj/lambis/src/main.rs
