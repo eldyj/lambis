@@ -1,0 +1,41 @@
+rest = 1
+first = 0
+
+arrAdd = λxra. a ${
+	first -> x
+	rest  -> r
+}.
+
+arrInit  = λx. arrAdd x nothing.
+arrFirst = λx. x first.
+arrRest  = λx. x rest.
+
+arrLen = λx. x ${
+	nothing -> 0
+	x -> 1 + (arrLen (x rest))
+}.
+
+arrNth = λnx. x ${
+	nothing -> nothing
+	x -> (n ${
+		0 -> (x first)
+		n -> (arrNth n-1 (x rest))
+	})
+}.
+
+arrMap = λfx. x ${
+	nothing -> nothing
+	x -> (arrAdd (f (x first)) (arrMap f (x rest)))
+}.
+
+arrReduce = (λfx. (λl. l ${
+	0 -> nothing
+	1 -> nothing
+	2 -> (f (x first) (arrNth 1 x))
+	l -> (f (x first) (arrReduce f (x rest)))
+})  (arrLen x)).
+
+sum = (arrReduce (+)).
+
+arr = (arrAdd 3 (arrAdd 2 (arrInit 1)))
+! (sum (arrMap (*69) arr))

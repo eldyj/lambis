@@ -8,7 +8,11 @@ fn main() {
 		panic!("Usage: {} <file>", program)
 	};
 
-	interpreter::eval_start(
-		fs::read_to_string(file.clone())
-			.expect(format!("failed to open file {}", file).as_str()));
+	if let Err(x) = interpreter::eval_start(
+		fs::read_to_string(
+			file.clone())
+				.unwrap_or_else(|_| panic!("failed to open file {}", file))
+	) {
+		panic!("{}", x);
+	};
 }

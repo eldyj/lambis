@@ -109,8 +109,8 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 			parser::Value::None
 		}
 
-		parser::ASTNode::Definition(name, content) => {
-			let res: parser::Value = eval(*content, variables, args);
+		parser::ASTNode::Definition {name, value} => {
+			let res: parser::Value = eval(*value, variables, args);
 			variables.insert(name, res.clone());
 			res
 		}
@@ -118,7 +118,7 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 		parser::ASTNode::Value(val) => {
 			match val {
 				parser::Value::Variable(name) => {
-					let first: char = name.chars().nth(0).unwrap();
+					let first: char = name.chars().next().unwrap();
 
 					if variables.contains_key(&name) {
 						variables[&name].clone()
@@ -133,7 +133,7 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 			}
 		}
 
-		parser::ASTNode::LambdaCall(lambda, _args) => {
+		parser::ASTNode::LambdaCall {lambda, args: _args} => {
 			let parser::Value::Lambda(args_def, content) = *lambda.clone() else {
 				unreachable!("how the fuck you managed to get non-lambda in LambdaCall???")
 			};
@@ -148,14 +148,17 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 			if len < len2 {
 				parser::Value::Lambda(
 					args_def[len..].to_string(),
-					Box::new(parser::ASTNode::LambdaCall(
-						Box::new(parser::Value::Lambda(
+					Box::new(parser::ASTNode::LambdaCall {
+						lambda: Box::new(parser::Value::Lambda(
 							args_def[..len].to_string(),
 							content,
 						)),
-						_args.clone()
-					))
-				)
+						args :_args
+							.into_iter()
+							.map(|e| -> parser::ASTNode {
+								parser::ASTNode::Value(eval(e, variables, args))
+							}).collect::<Vec<parser::ASTNode>>(),
+				}))
 			} else {
 				for (index, i) in _args.into_iter().enumerate() {
 					if let Some(ch) = args_def.chars().nth(index) {
@@ -171,16 +174,18 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 			}
 		}
 
-		parser::ASTNode::Call(name, args_) => {
+		parser::ASTNode::Call {name, args: args_} => {
 			let var_content: parser::Value = eval(parser::ASTNode::Value(parser::Value::Variable(name.clone())), variables, args);
 			if let parser::Value::Lambda(_, _) = var_content {
-				eval(parser::ASTNode::LambdaCall(Box::new(var_content), args_), variables, args)
+				eval(parser::ASTNode::LambdaCall {
+					lambda: Box::new(var_content), args: args_
+				}, variables, args)
 			} else {
 				panic!("InterpreterError: trying to call value «{:?}, {:?}»", var_content, name.clone())
 			}
 		}
 
-		parser::ASTNode::Operation(op, left_, right_) => {
+		parser::ASTNode::Operation{left: left_, operation: op, right: right_} => {
 			let left: parser::Value = eval(*left_, variables, args);
 			let right: parser::Value = eval(*right_, variables, args);
 			operation(op, left, right)
@@ -188,17 +193,18 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 	}
 }
 
-pub fn eval_start(s: String) -> () {
-	let p: Vec<parser::ASTNode> = parser::parse(s);
+pub fn eval_start(s: String) -> Result<(), String> {
+	let p: Vec<parser::ASTNode> = parser::parse(s)?;
 	let mut variables: HashMap<String, parser::Value> = HashMap::new();
 	let mut arguments: HashMap<char, parser::Value> = HashMap::new();
 
 	variables.insert("true".to_string(), parser::Value::Integer(1));
 	variables.insert("false".to_string(), parser::Value::Integer(0));
-
-	//println!("{:?}", p);
+	variables.insert("nothing".to_string(), parser::Value::None);
 
 	for i in p {
 		eval(i, &mut variables, &mut arguments);
 	}
+
+	Ok(())
 }

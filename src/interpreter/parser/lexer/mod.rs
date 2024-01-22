@@ -37,9 +37,9 @@ pub enum Token {
 trait LexableExt<'a> {
 	fn lex_ident(&mut self) -> Token;
 	fn lex_integer(&mut self) -> Token;
-	fn lex_multiline_comment(&mut self) -> ();
-	fn lex_comment(&mut self) -> ();
-	fn lex_spaces(&mut self) -> ();
+	fn lex_multiline_comment(&mut self);
+	fn lex_comment(&mut self);
+	fn lex_spaces(&mut self);
 	fn lex(&mut self) -> Vec<Token>;
 }
 
@@ -75,7 +75,7 @@ impl LexableExt<'_> for Lexable<'_> {
 		Token::Integer(temporary.parse::<i128>().unwrap())
 	}
 
-	fn lex_spaces(&mut self) -> () {
+	fn lex_spaces(&mut self) {
 		while let Some(&ch) = self.peek() {
 			if !check::is_space(ch) {
 				break
@@ -85,19 +85,17 @@ impl LexableExt<'_> for Lexable<'_> {
 		}
 	}
 
-	fn lex_multiline_comment(&mut self) -> () {
+	fn lex_multiline_comment(&mut self) {
 		while let Some(&ch) = self.peek() {
 			let _: Option<char> = self.next();
-			if ch == '#' {
-				if self.peek() == Some(&'#') {
-					let _: Option<char> = self.next();
-					break
-				}
+			if ch == '#' && self.peek() == Some(&'#') {
+				let _: Option<char> = self.next();
+				break
 			}
 		}
 	}
 
-	fn lex_comment(&mut self) -> () {
+	fn lex_comment(&mut self) {
 		let _: Option<char> = self.next();
 		if self.peek() == Some(&'#') {
 			self.lex_multiline_comment();
