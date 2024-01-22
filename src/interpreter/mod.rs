@@ -69,7 +69,7 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 		parser::ASTNode::Print(value_) => {
 			let value: parser::Value = eval(*value_, variables, args);
 			match value {
-				parser::Value::Lambda(args_def, _) => println!("<λ{}.>", args_def),
+				parser::Value::Lambda {args_def, ..} => println!("<λ{}.>", args_def),
 				parser::Value::Integer(int) => println!("{}", int),
 				parser::Value::Decimal(dec) => println!("{}", dec),
 				parser::Value::None => println!("Nothing"),
@@ -97,7 +97,7 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 			}
 		}
 
-		parser::ASTNode::Switch(compared_, cases) => {
+		parser::ASTNode::Switch {compared: compared_, cases} => {
 			let compared: parser::Value = eval(*compared_, variables, args);
 			for (case_, action) in cases {
 				let case: parser::Value = eval(case_, variables, args);
@@ -134,7 +134,7 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 		}
 
 		parser::ASTNode::LambdaCall {lambda, args: _args} => {
-			let parser::Value::Lambda(args_def, content) = *lambda.clone() else {
+			let parser::Value::Lambda {args_def, content} = *lambda.clone() else {
 				unreachable!("how the fuck you managed to get non-lambda in LambdaCall???")
 			};
 
@@ -146,19 +146,19 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 			}
 
 			if len < len2 {
-				parser::Value::Lambda(
-					args_def[len..].to_string(),
-					Box::new(parser::ASTNode::LambdaCall {
-						lambda: Box::new(parser::Value::Lambda(
-							args_def[..len].to_string(),
+				parser::Value::Lambda {
+					args_def: args_def[len..].to_string(),
+					content: Box::new(parser::ASTNode::LambdaCall {
+						lambda: Box::new(parser::Value::Lambda {
+							args_def: args_def[..len].to_string(),
 							content,
-						)),
+						}),
 						args :_args
 							.into_iter()
 							.map(|e| -> parser::ASTNode {
 								parser::ASTNode::Value(eval(e, variables, args))
 							}).collect::<Vec<parser::ASTNode>>(),
-				}))
+				})}
 			} else {
 				for (index, i) in _args.into_iter().enumerate() {
 					if let Some(ch) = args_def.chars().nth(index) {
@@ -176,7 +176,7 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 
 		parser::ASTNode::Call {name, args: args_} => {
 			let var_content: parser::Value = eval(parser::ASTNode::Value(parser::Value::Variable(name.clone())), variables, args);
-			if let parser::Value::Lambda(_, _) = var_content {
+			if let parser::Value::Lambda {..} = var_content {
 				eval(parser::ASTNode::LambdaCall {
 					lambda: Box::new(var_content), args: args_
 				}, variables, args)

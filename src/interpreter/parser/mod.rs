@@ -6,7 +6,10 @@ pub enum Value {
 	Variable(String),
 	Integer(i128),
 	Decimal(f64),
-	Lambda(String, Box<ASTNode>),
+	Lambda {
+		args_def: String,
+		content: Box<ASTNode>
+	},
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -44,7 +47,11 @@ pub enum ASTNode {
 		args: Vec<ASTNode>
 	},
 
-	Switch(Box<ASTNode>, Vec<(ASTNode, ASTNode)>),
+	Switch {
+		compared: Box<ASTNode>,
+		cases: Vec<(ASTNode, ASTNode)>
+	},
+
 	RationalPart(Box<ASTNode>),
 	IntegerPart(Box<ASTNode>),
 	Print(Box<ASTNode>),
@@ -146,7 +153,10 @@ impl Parseable {
 		}
 
 		self.consume(lexer::Token::CloseBrace)?;
-		Ok(ASTNode::Switch(Box::new(compared), cases))
+		Ok(ASTNode::Switch {
+			compared: Box::new(compared),
+			cases
+		})
 	}
 
 	fn is_delimiter(&self) -> bool {
@@ -212,12 +222,13 @@ impl Parseable {
 		Ok(match self.parse_expression(true, allow_operations) {
 			Err(_) => {
 				self.current_index = index;
-				ASTNode::Value(Value::Lambda("Y".to_string(),
-					Box::new(ASTNode::Operation {
+				ASTNode::Value(Value::Lambda {
+					args_def: "Y".to_string(),
+					content: Box::new(ASTNode::Operation {
 						left: Box::new(left),
 						operation,
 						right: Box::new(ASTNode::Value(Value::Variable("Y".to_string())))
-					})))
+					})})
 			}
 
 			Ok(content) => {
@@ -258,11 +269,13 @@ impl Parseable {
 
 				Ok(if self.peek() == Some(lexer::Token::CloseBracket) {
 					let _: Option<lexer::Token> =  self.next();
-					ASTNode::Value(Value::Lambda("X".to_string(), Box::new(
-						ASTNode::IntegerPart(Box::new(
-							ASTNode::Value(Value::Variable("X".to_string()))
-						))
-					)))
+					ASTNode::Value(Value::Lambda {
+						args_def: "X".to_string(),
+						content: Box::new(
+							ASTNode::IntegerPart(Box::new(
+								ASTNode::Value(Value::Variable("X".to_string()))
+							)))
+					})
 				} else {
 					let result: ASTNode = self.parse_expression(false, true)?;
 					self.consume(lexer::Token::CloseBracket)?;
@@ -280,11 +293,13 @@ impl Parseable {
 				Ok(if self.peek() == Some(lexer::Token::CloseBrace) {
 					let _: Option<lexer::Token> = self.next();
 
-					ASTNode::Value(Value::Lambda("X".to_string(), Box::new(
+					ASTNode::Value(Value::Lambda {
+						args_def: "X".to_string(),
+						content: Box::new(
 						ASTNode::RationalPart(Box::new(
 							ASTNode::Value(Value::Variable("X".to_string()))
-						))
-					)))
+						)))
+					})
 				} else {
 					let result: ASTNode = ASTNode::RationalPart(Box::new(self.parse_expression(false, true)?));
 					self.consume(lexer::Token::CloseBrace)?;
@@ -305,7 +320,7 @@ impl Parseable {
 				let res: ASTNode = if let ASTNode::Value(ref value) = result {
 					if from_call {
 						result
-					} else if let Value::Lambda(_, _) = value {
+					} else if let Value::Lambda {..} = value {
 						let mut args: Vec<ASTNode> = vec![];
 
 						while !self.is_empty()
@@ -352,12 +367,12 @@ impl Parseable {
 
 			lexer::Token::Lambda => {
 				let _: Option<lexer::Token> = self.next();
-				let mut variables: String = self.consume_ident()?;
+				let mut args_def: String = self.consume_ident()?;
 				self.consume(lexer::Token::Period)?;
 				let mut body: Box<ASTNode> = Box::new(self.parse_expression(false, true)?);
 
-				if let ASTNode::Value(Value::Lambda(vars, content)) = *body.clone() {
-					variables += vars.as_str();
+				if let ASTNode::Value(Value::Lambda{args_def: args_def_, content}) = *body.clone() {
+					args_def += args_def_.as_str();
 					body = content;
 				}
 
@@ -365,7 +380,10 @@ impl Parseable {
 					let _: Option<lexer::Token> = self.next();
 				}
 
-				Ok(ASTNode::Value(Value::Lambda(variables, body.clone())))
+				Ok(ASTNode::Value(Value::Lambda{
+					args_def,
+					content: body.clone()
+				}))
 			}
 
 			lexer::Token::Integer(_) => {
@@ -448,10 +466,13 @@ impl Parseable {
 
 			_ if self.is_operation() => {
 				let result: ASTNode = self.parse_operation(ASTNode::Value(Value::Variable("X".to_string())))?;
-				Ok(ASTNode::Value(if let ASTNode::Value(Value::Lambda(args_def, content)) = result {
-					Value::Lambda("X".to_string() + args_def.as_str(), content)
-				} else {
-					Value::Lambda("X".to_string(), Box::new(result))
+				Ok(ASTNode::Value(Value::Lambda {
+					args_def: "X".to_string(),
+					content: if let ASTNode::Value(Value::Lambda {content, ..}) = result {
+						content
+					} else {
+						Box::new(result)
+					}
 				}))
 			}
 
