@@ -141,7 +141,7 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 			let mut new_args: HashMap<char, parser::Value> = args.clone();
 			let len: usize = args_.len();
 			let len2: usize = args_def.len();
-			assert!(len > len2, "InterpreterError: too much argumeths for «{lambda:?}»");
+			assert!(len <= len2, "InterpreterError: too much arguments ({len}/{len2}) for «{lambda:?}»");
 
 			if len < len2 {
 				parser::Value::Lambda {
