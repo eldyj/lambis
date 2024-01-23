@@ -130,23 +130,16 @@ impl LexableExt<'_> for Lexable<'_> {
 						let mut clone: Lexable = self.clone();
 						let _: Option<char> = clone.next();
 
-						if let Some(ch) = clone.peek() {
-							match ch {
-								'=' => {
-									let _: Option<char> = self.next();
-									Token::LessEqual
-								}
+						clone.peek().and_then(|ch: &char| -> Option<Token> {
+							let res: Option<Token> = Some(match ch {
+								'=' => Token::LessEqual,
+								'>' => Token::NotEqual,
+								_ => return None
+							});
 
-								'>' => {
-									let _: Option<char> = self.next();
-									Token::NotEqual
-								}
-
-								_ => Token::Less
-							}
-						} else {
-							Token::Less
-						}
+							let _: Option<char> = self.next();
+							res
+						}).unwrap_or(Token::Less)
 					}
 
 					'>' => {
@@ -164,28 +157,17 @@ impl LexableExt<'_> for Lexable<'_> {
 						let mut clone: Lexable = self.clone();
 						let _: Option<char> = clone.next();
 
-						if let Some(ch) = clone.peek() {
-							match ch {
-								'=' => {
-									let _: Option<char> = self.next();
-									Token::NotEqual
-								}
+						clone.peek().and_then(|ch: &char| -> Option<Token> {
+							let res: Option<Token> = Some(match ch {
+								'=' => Token::NotEqual,
+								'<' => Token::GreaterEqual,
+								'>' => Token::LessEqual,
+								_ => return None,
+							});
 
-								'<' => {
-									let _: Option<char> = self.next();
-									Token::GreaterEqual
-								}
-
-								'>' => {
-									let _: Option<char> = self.next();
-									Token::LessEqual
-								}
-
-								_ => Token::Exclam
-							}
-						} else {
-							Token::Exclam
-						}
+							let _: Option<char> = self.next();
+							res
+						}).unwrap_or(Token::Exclam)
 					}
 
 					'⩾'|'≧'|'≥'|'≮' => Token::GreaterEqual,
@@ -220,7 +202,7 @@ impl LexableExt<'_> for Lexable<'_> {
 					'|' => Token::Bar,
 					'\'' => Token::Apostrophe,
 					'→' => Token::Arrow,
-					 _  => panic!("LexError: what the fuck is {}", ch),
+					 _  => panic!("LexError: what the fuck is {ch}"),
 				});
 
 				let _: Option<char> = self.next();
@@ -230,6 +212,6 @@ impl LexableExt<'_> for Lexable<'_> {
 	}
 }
 
-pub fn lex(source: String) -> Vec<Token> {
+pub fn lex(source: &str) -> Vec<Token> {
 	source.chars().peekable().lex()
 }

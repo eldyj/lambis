@@ -1,7 +1,7 @@
 pub mod parser;
 use std::collections::HashMap;
 
-fn integer_operation(op: parser::Operation, left: i128, right: i128) -> parser::Value {
+fn integer_operation(op: &parser::Operation, left: i128, right: i128) -> parser::Value {
 	match op {
 		parser::Operation::Addition => parser::Value::Integer(left + right),
 		parser::Operation::Substraction => parser::Value::Integer(left - right),
@@ -16,17 +16,17 @@ fn integer_operation(op: parser::Operation, left: i128, right: i128) -> parser::
 
 		parser::Operation::Exponent => parser::Value::Decimal((left as f64).powi(right as i32)),
 
-		parser::Operation::Less => parser::Value::Integer((left < right) as i128),
-		parser::Operation::LessEqual => parser::Value::Integer((left <= right) as i128),
-		parser::Operation::Greater => parser::Value::Integer((left > right) as i128),
-		parser::Operation::GreaterEqual => parser::Value::Integer((left >= right) as i128),
-		parser::Operation::Equal => parser::Value::Integer((left == right) as i128),
-		parser::Operation::NotEqual => parser::Value::Integer((left != right) as i128),
+		parser::Operation::Less => parser::Value::Integer(i128::from(left < right)),
+		parser::Operation::LessEqual => parser::Value::Integer(i128::from(left <= right)),
+		parser::Operation::Greater => parser::Value::Integer(i128::from(left > right)),
+		parser::Operation::GreaterEqual => parser::Value::Integer(i128::from(left >= right)),
+		parser::Operation::Equal => parser::Value::Integer(i128::from(left == right)),
+		parser::Operation::NotEqual => parser::Value::Integer(i128::from(left != right)),
 		//_ => panic!("InterpretationError: Unsupported operation for integers"),
 	}
 }
 
-fn decimal_operation(op: parser::Operation, left: f64, right: f64) -> parser::Value {
+fn decimal_operation(op: &parser::Operation, left: f64, right: f64) -> parser::Value {
 	parser::Value::Decimal(match op {
 		parser::Operation::Addition => left + right,
 		parser::Operation::Substraction => left - right,
@@ -34,17 +34,18 @@ fn decimal_operation(op: parser::Operation, left: f64, right: f64) -> parser::Va
 		parser::Operation::Division => left / right,
 		parser::Operation::Exponent => left.powf(right),
 
-		parser::Operation::Less => (left < right) as i128 as f64,
-		parser::Operation::LessEqual => (left <= right) as i128 as f64,
-		parser::Operation::Greater => (left > right) as i128 as f64,
-		parser::Operation::GreaterEqual => (left >= right) as i128 as f64,
-		parser::Operation::Equal => (left == right) as i128 as f64,
-		parser::Operation::NotEqual => (left != right) as i128 as f64,
+		parser::Operation::Less => f64::from(left < right),
+		parser::Operation::LessEqual => f64::from(left <= right),
+		parser::Operation::Greater => f64::from(left > right),
+		parser::Operation::GreaterEqual => f64::from(left >= right),
+		parser::Operation::Equal => f64::from(left == right),
+		parser::Operation::NotEqual => f64::from(left != right),
 		//_ => panic!("InterpretationError: Unsupported operation for decimals"),
 	})
 }
 
-fn operation(op: parser::Operation, left: parser::Value, right: parser::Value) -> parser::Value {
+#[allow(clippy::cast_possible_truncation)]
+fn operation(op: &parser::Operation, left: parser::Value, right: parser::Value) -> parser::Value {
 	match (left, right) {
 		(parser::Value::Integer(n1), parser::Value::Integer(n2)) => {
 			integer_operation(op, n1, n2)
@@ -62,6 +63,7 @@ fn operation(op: parser::Operation, left: parser::Value, right: parser::Value) -
 	}
 }
 
+#[allow(clippy::cast_possible_truncation)]
 pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value>, args: &mut HashMap<char, parser::Value>) -> parser::Value {
 	match node {
 		parser::ASTNode::Nothing => parser::Value::None,
@@ -69,11 +71,11 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 		parser::ASTNode::Print(value_) => {
 			let value: parser::Value = eval(*value_, variables, args);
 			match value {
-				parser::Value::Lambda {args_def, ..} => println!("<λ{}.>", args_def),
-				parser::Value::Integer(int) => println!("{}", int),
-				parser::Value::Decimal(dec) => println!("{}", dec),
+				parser::Value::Lambda {args_def, ..} => println!("<λ{args_def}.>"),
+				parser::Value::Integer(int) => println!("{int}"),
+				parser::Value::Decimal(dec) => println!("{dec}"),
 				parser::Value::None => println!("Nothing"),
-				what => println!("{:?}", what),
+				parser::Value::Variable(_) => unreachable!("how tf you achieved variable after eval"),
 			}
 
 			parser::Value::None
@@ -84,7 +86,7 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 			match value {
 				parser::Value::Integer(_) => parser::Value::Integer(0),
 				parser::Value::Decimal(n) =>parser::Value::Decimal(n-n.floor()),
-				what => panic!("InterpreterError: {{_}}: expected <Integer|Decimal>, got {:?}", what),
+				what => panic!("InterpreterError: {{_}}: expected <Integer|Decimal>, got {what:?}"),
 			}
 		}
 
@@ -93,7 +95,7 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 			match value {
 				parser::Value::Integer(_) => value,
 				parser::Value::Decimal(n) => parser::Value::Integer(n.floor() as i128),
-				what => panic!("InterpreterError: [_]: Expected <Integer|Decimal>, got {:?}", what),
+				what => panic!("InterpreterError: [_]: Expected <Integer|Decimal>, got {what:?}"),
 			}
 		}
 
@@ -125,7 +127,7 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 					} else if name.len() == 1 && args.contains_key(&first) {
 						args[&first].clone()
 					} else {
-						panic!("InterpreterError: variable «{}» is undefined in current context", name)
+						panic!("InterpreterError: variable «{name}» is undefined in current context")
 					}
 				}
 
@@ -133,17 +135,15 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 			}
 		}
 
-		parser::ASTNode::LambdaCall {lambda, args: _args} => {
+		parser::ASTNode::LambdaCall {lambda, args: args_} => {
 			let parser::Value::Lambda {args_def, content} = *lambda.clone() else {
 				unreachable!("how the fuck you managed to get non-lambda in LambdaCall???")
 			};
 
 			let mut new_args: HashMap<char, parser::Value> = args.clone();
-			let len: usize = _args.len();
+			let len: usize = args_.len();
 			let len2: usize = args_def.len();
-			if len > len2 {
-				panic!("InterpreterError: too much argumeths for «{:?}»", lambda.clone())
-			}
+			assert!(len > len2, "InterpreterError: too much argumeths for «{lambda:?}»");
 
 			if len < len2 {
 				parser::Value::Lambda {
@@ -153,14 +153,15 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 							args_def: args_def[..len].to_string(),
 							content,
 						}),
-						args :_args
+
+						args: args_
 							.into_iter()
 							.map(|e| -> parser::ASTNode {
 								parser::ASTNode::Value(eval(e, variables, args))
 							}).collect::<Vec<parser::ASTNode>>(),
 				})}
 			} else {
-				for (index, i) in _args.into_iter().enumerate() {
+				for (index, i) in args_.into_iter().enumerate() {
 					if let Some(ch) = args_def.chars().nth(index) {
 						if new_args.contains_key(&ch) {
 							new_args.remove(&ch);
@@ -170,7 +171,7 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 					}
 				}
 
-				eval(*content.clone(), variables, &mut new_args)
+				eval(*content, variables, &mut new_args)
 			}
 		}
 
@@ -181,19 +182,19 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 					lambda: Box::new(var_content), args: args_
 				}, variables, args)
 			} else {
-				panic!("InterpreterError: trying to call value «{:?}, {:?}»", var_content, name.clone())
+				panic!("InterpreterError: trying to call value «{name}, {var_content:?}»")
 			}
 		}
 
 		parser::ASTNode::Operation{left: left_, operation: op, right: right_} => {
 			let left: parser::Value = eval(*left_, variables, args);
 			let right: parser::Value = eval(*right_, variables, args);
-			operation(op, left, right)
+			operation(&op, left, right)
 		}
 	}
 }
 
-pub fn eval_start(s: String) -> Result<(), String> {
+pub fn eval_start(s: &str) -> Result<(), String> {
 	let p: Vec<parser::ASTNode> = parser::parse(s)?;
 	let mut variables: HashMap<String, parser::Value> = HashMap::new();
 	let mut arguments: HashMap<char, parser::Value> = HashMap::new();
