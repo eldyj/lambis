@@ -44,7 +44,6 @@ fn decimal_operation(op: &parser::Operation, left: f64, right: f64) -> parser::V
 	})
 }
 
-#[allow(clippy::cast_possible_truncation)]
 fn operation(op: &parser::Operation, left: parser::Value, right: parser::Value) -> parser::Value {
 	match (left, right) {
 		(parser::Value::Integer(n1), parser::Value::Integer(n2)) => {
@@ -63,7 +62,6 @@ fn operation(op: &parser::Operation, left: parser::Value, right: parser::Value) 
 	}
 }
 
-#[allow(clippy::cast_possible_truncation)]
 pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value>, args: &mut HashMap<char, parser::Value>) -> parser::Value {
 	match node {
 		parser::ASTNode::Nothing => parser::Value::None,

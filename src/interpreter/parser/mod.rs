@@ -12,7 +12,7 @@ pub enum Value {
 	},
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Operation {
 	Addition,
 	Substraction,
@@ -318,6 +318,115 @@ impl Parseable {
 		})
 	}
 
+	fn parse_integer_part(&mut self, allow_operations: bool) -> Result<ASTNode, String> {
+		let _: Option<lexer::Token> = self.next();
+
+		Ok(if self.peek() == Some(lexer::Token::CloseBracket) {
+			let _: Option<lexer::Token> =  self.next();
+			ASTNode::Value(Value::Lambda {
+				args_def: "X".to_string(),
+				content: Box::new(
+					ASTNode::IntegerPart(Box::new(
+						ASTNode::Value(Value::Variable("X".to_string()))
+					)))
+			})
+		} else {
+			let result: ASTNode = ASTNode::IntegerPart(Box::new(self.parse_expression(false, true)?));
+			self.consume(&lexer::Token::CloseBracket)?;
+
+			if allow_operations && self.is_operation() {
+				self.parse_operation(result)?
+			} else if self.peek() == Some(lexer::Token::Dollar) {
+				self.parse_switch(result)?
+			} else {
+				result
+			}
+		})
+	}
+
+	fn parse_rational_part(&mut self, allow_operations: bool) -> Result<ASTNode, String> {
+		let _: Option<lexer::Token> = self.next();
+		Ok(if self.peek() == Some(lexer::Token::CloseBrace) {
+			let _: Option<lexer::Token> = self.next();
+
+			ASTNode::Value(Value::Lambda {
+				args_def: "X".to_string(),
+				content: Box::new(
+				ASTNode::RationalPart(Box::new(
+					ASTNode::Value(Value::Variable("X".to_string()))
+				)))
+			})
+		} else {
+			let result: ASTNode = ASTNode::RationalPart(Box::new(self.parse_expression(false, true)?));
+			self.consume(&lexer::Token::CloseBrace)?;
+
+			if allow_operations && self.is_operation() {
+				self.parse_operation(result)?
+			} else {
+				result
+			}
+		})
+	}
+
+
+	fn parse_ident(&mut self, from_call: bool, allow_operations: bool) -> Result<ASTNode, String> {
+		let name: String = self.consume_ident()?;
+
+		Ok(if from_call {
+			let result: ASTNode = ASTNode::Value(Value::Variable(name));
+			if allow_operations && self.is_operation() {
+				self.parse_operation(result)?
+			} else if self.peek() == Some(lexer::Token::Dollar) {
+				self.parse_switch(result)?
+			} else {
+				result
+			}
+		} else if self.peek() == Some(lexer::Token::Equal) {
+			let _: Option<lexer::Token> = self.next();
+			ASTNode::Definition {
+				name,
+				value: Box::new(self.parse_expression(false, true)?)
+			}
+		} else {
+			let mut args: Vec<ASTNode> = vec![];
+
+			while !self.is_empty()
+			&& !self.is_delimiter()
+			&& !self.is_operation()
+			&& self.peek() != Some(lexer::Token::Period) {
+				args.push(self.parse_expression(true, true)?);
+			}
+
+			let result: ASTNode = if args.is_empty() {
+				ASTNode::Value(Value::Variable(name))
+			} else {
+				ASTNode::Call {
+					name,
+					args
+				}
+			};
+
+			if let Some(token) = self.peek() {
+				if allow_operations && self.is_operation() {
+					self.parse_operation(result)?
+				} else if token == lexer::Token::Period {
+					let _: Option<lexer::Token> = self.next();
+					result
+				} else if !from_call && token == lexer::Token::Dollar {
+					self.parse_switch(result)?
+				} else {
+					if token == lexer::Token::Period {
+						let _: Option<lexer::Token> = self.next();
+					}
+
+					result
+				}
+			} else {
+				result
+			}
+		})
+	}
+
 	fn parse_expression(&mut self, from_call: bool, allow_operations: bool) -> Result<ASTNode, String> {
 		let Some(current): Option<lexer::Token> = self.peek() else {
 			return Ok(ASTNode::Nothing)
@@ -329,54 +438,8 @@ impl Parseable {
 				Ok(ASTNode::Print(Box::new(self.parse_expression(false, true)?)))
 			}
 
-			lexer::Token::OpenBracket => {
-				let _: Option<lexer::Token> = self.next();
-
-				Ok(if self.peek() == Some(lexer::Token::CloseBracket) {
-					let _: Option<lexer::Token> =  self.next();
-					ASTNode::Value(Value::Lambda {
-						args_def: "X".to_string(),
-						content: Box::new(
-							ASTNode::IntegerPart(Box::new(
-								ASTNode::Value(Value::Variable("X".to_string()))
-							)))
-					})
-				} else {
-					let result: ASTNode = self.parse_expression(false, true)?;
-					self.consume(&lexer::Token::CloseBracket)?;
-
-					if allow_operations && self.is_operation() {
-						self.parse_operation(result)?
-					} else {
-						ASTNode::IntegerPart(Box::new(result))
-					}
-				})
-			}
-
-			lexer::Token::OpenBrace => {
-				let _: Option<lexer::Token> = self.next();
-				Ok(if self.peek() == Some(lexer::Token::CloseBrace) {
-					let _: Option<lexer::Token> = self.next();
-
-					ASTNode::Value(Value::Lambda {
-						args_def: "X".to_string(),
-						content: Box::new(
-						ASTNode::RationalPart(Box::new(
-							ASTNode::Value(Value::Variable("X".to_string()))
-						)))
-					})
-				} else {
-					let result: ASTNode = ASTNode::RationalPart(Box::new(self.parse_expression(false, true)?));
-					self.consume(&lexer::Token::CloseBrace)?;
-
-					if allow_operations && self.is_operation() {
-						self.parse_operation(result)?
-					} else {
-						result
-					}
-				})
-			}
-
+			lexer::Token::OpenBracket => self.parse_integer_part(allow_operations),
+			lexer::Token::OpenBrace => self.parse_rational_part(allow_operations),
 			lexer::Token::OpenParen => self.parse_pair(from_call, allow_operations),
 
 			lexer::Token::Lambda => {
@@ -420,64 +483,7 @@ impl Parseable {
 				})
 			}
 
-			lexer::Token::Ident(_) => {
-				let name: String = self.consume_ident()?;
-
-				Ok(if from_call {
-					let result: ASTNode = ASTNode::Value(Value::Variable(name));
-					if allow_operations && self.is_operation() {
-						self.parse_operation(result)?
-					} else if self.peek() == Some(lexer::Token::Dollar) {
-						self.parse_switch(result)?
-					} else {
-						result
-					}
-				} else if self.peek() == Some(lexer::Token::Equal) {
-					let _: Option<lexer::Token> = self.next();
-					ASTNode::Definition {
-						name,
-						value: Box::new(self.parse_expression(false, true)?)
-					}
-				} else {
-					let mut args: Vec<ASTNode> = vec![];
-
-					while !self.is_empty()
-					&& !self.is_delimiter()
-					&& !self.is_operation()
-					&& self.peek() != Some(lexer::Token::Period) {
-						args.push(self.parse_expression(true, true)?);
-					}
-
-					let result: ASTNode = if args.is_empty() {
-						ASTNode::Value(Value::Variable(name))
-					} else {
-						ASTNode::Call {
-							name,
-							args
-						}
-					};
-
-					if let Some(token) = self.peek() {
-						if allow_operations && self.is_operation() {
-							self.parse_operation(result)?
-						} else if token == lexer::Token::Period {
-							let _: Option<lexer::Token> = self.next();
-							result
-						} else if !from_call && token == lexer::Token::Dollar {
-							self.parse_switch(result)?
-						} else {
-							if token == lexer::Token::Period {
-								let _: Option<lexer::Token> = self.next();
-							}
-
-							result
-						}
-					} else {
-						result
-					}
-				})
-			}
-
+			lexer::Token::Ident(_) => self.parse_ident(from_call, allow_operations),
 			_ if self.is_operation() => self.parse_partial_operation(),
 
 			what => {

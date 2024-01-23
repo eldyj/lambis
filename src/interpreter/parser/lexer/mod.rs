@@ -2,7 +2,7 @@ mod check;
 use std::{iter::Peekable, str::Chars};
 type Lexable<'a> = Peekable<Chars<'a>>;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Token {
 	OpenParen,     // (
 	CloseParen,    // )
