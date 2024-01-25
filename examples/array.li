@@ -6,17 +6,17 @@ arrAdd = λxra. a ${
 	rest  -> r
 }.
 
-arrInit  = λx. arrAdd x nothing.
+arrInit  = λx. arrAdd x ().
 arrFirst = λx. x first.
 arrRest  = λx. x rest.
 
 arrLen = λx. x ${
-	nothing -> 0
+	() -> 0
 	x -> 1 + (arrLen (x rest))
 }.
 
 arrNth = λnx. x ${
-	nothing -> nothing
+	() -> ()
 	x -> (n ${
 		0 -> (x first)
 		n -> (arrNth n-1 (x rest))
@@ -24,13 +24,13 @@ arrNth = λnx. x ${
 }.
 
 arrMap = λfx. x ${
-	nothing -> nothing
+	() -> ()
 	x -> (arrAdd (f (x first)) (arrMap f (x rest)))
 }.
 
 arrReduce = (λfx. (λl. l ${
-	0 -> nothing
-	1 -> nothing
+	0 -> ()
+	1 -> ()
 	2 -> (f (x first) (arrNth 1 x))
 	l -> (f (x first) (arrReduce f (x rest)))
 })  (arrLen x)).

@@ -14,7 +14,7 @@ fn integer_operation(op: &parser::Operation, left: i128, right: i128) -> parser:
 			}
 		}
 
-		parser::Operation::Exponent => parser::Value::Decimal((left as f64).powi(right as i32)),
+		parser::Operation::Exponent => parser::Value::Decimal((left as f64).powi(i32::try_from(right).unwrap())),
 
 		parser::Operation::Less => parser::Value::Integer(i128::from(left < right)),
 		parser::Operation::LessEqual => parser::Value::Integer(i128::from(left <= right)),
@@ -38,8 +38,8 @@ fn decimal_operation(op: &parser::Operation, left: f64, right: f64) -> parser::V
 		parser::Operation::LessEqual => f64::from(left <= right),
 		parser::Operation::Greater => f64::from(left > right),
 		parser::Operation::GreaterEqual => f64::from(left >= right),
-		parser::Operation::Equal => f64::from(left == right),
-		parser::Operation::NotEqual => f64::from(left != right),
+		parser::Operation::Equal => f64::from((left - right).abs() < f64::EPSILON),
+		parser::Operation::NotEqual => f64::from((left - right).abs() > f64::EPSILON),
 		//_ => panic!("InterpretationError: Unsupported operation for decimals"),
 	})
 }
@@ -145,10 +145,10 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 
 			if len < len2 {
 				parser::Value::Lambda {
-					args_def: args_def[len..].to_string(),
+					args_def: args_def[len..].to_owned(),
 					content: Box::new(parser::ASTNode::LambdaCall {
 						lambda: Box::new(parser::Value::Lambda {
-							args_def: args_def[..len].to_string(),
+							args_def: args_def[..len].to_owned(),
 							content,
 						}),
 
@@ -180,7 +180,7 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 					lambda: Box::new(var_content), args: args_
 				}, variables, args)
 			} else {
-				panic!("InterpreterError: trying to call value «{name}, {var_content:?}»")
+				panic!("InterpreterError: trying to call «{name}, {var_content:?}»")
 			}
 		}
 
@@ -197,9 +197,8 @@ pub fn eval_start(s: &str) -> Result<(), String> {
 	let mut variables: HashMap<String, parser::Value> = HashMap::new();
 	let mut arguments: HashMap<char, parser::Value> = HashMap::new();
 
-	variables.insert("true".to_string(), parser::Value::Integer(1));
-	variables.insert("false".to_string(), parser::Value::Integer(0));
-	variables.insert("nothing".to_string(), parser::Value::None);
+	variables.insert("true".to_owned(), parser::Value::Integer(1));
+	variables.insert("false".to_owned(), parser::Value::Integer(0));
 
 	for i in p {
 		eval(i, &mut variables, &mut arguments);

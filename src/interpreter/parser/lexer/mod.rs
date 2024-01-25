@@ -40,7 +40,7 @@ trait LexableExt<'a> {
 	fn lex_multiline_comment(&mut self);
 	fn lex_comment(&mut self);
 	fn lex_spaces(&mut self);
-	fn lex(&mut self) -> Vec<Token>;
+	fn lex(&mut self) -> Result<Vec<Token>, String>;
 }
 
 
@@ -110,7 +110,7 @@ impl LexableExt<'_> for Lexable<'_> {
 		}
 	}
 
-	fn lex(&mut self) -> Vec<Token> {
+	fn lex(&mut self) -> Result<Vec<Token>, String> {
 		let mut result: Vec<Token> = vec![];
 
 		while let Some(&ch) = self.peek() {
@@ -131,7 +131,7 @@ impl LexableExt<'_> for Lexable<'_> {
 						let _: Option<char> = clone.next();
 
 						clone.peek().and_then(|ch: &char| -> Option<Token> {
-							let res: Option<Token> = Some(match ch {
+							let res: Option<Token> = Some(match *ch {
 								'=' => Token::LessEqual,
 								'>' => Token::NotEqual,
 								_ => return None
@@ -158,7 +158,7 @@ impl LexableExt<'_> for Lexable<'_> {
 						let _: Option<char> = clone.next();
 
 						clone.peek().and_then(|ch: &char| -> Option<Token> {
-							let res: Option<Token> = Some(match ch {
+							let res: Option<Token> = Some(match *ch {
 								'=' => Token::NotEqual,
 								'<' => Token::GreaterEqual,
 								'>' => Token::LessEqual,
@@ -202,16 +202,16 @@ impl LexableExt<'_> for Lexable<'_> {
 					'|' => Token::Bar,
 					'\'' => Token::Apostrophe,
 					'→' => Token::Arrow,
-					 _  => panic!("LexError: what the fuck is {ch}"),
+					 _  => return Err("LexError: what the fuck is {ch}".to_owned()),
 				});
 
 				let _: Option<char> = self.next();
 			}
 		}
-		result
+		Ok(result)
 	}
 }
 
-pub fn lex(source: &str) -> Vec<Token> {
+pub fn lex(source: &str) -> Result<Vec<Token>, String> {
 	source.chars().peekable().lex()
 }
