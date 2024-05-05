@@ -72,6 +72,7 @@ pub fn eval(node: parser::ASTNode, variables: &mut HashMap<String, parser::Value
 				parser::Value::Lambda {args_def, ..} => println!("<λ{args_def}.>"),
 				parser::Value::Integer(int) => println!("{int}"),
 				parser::Value::Decimal(dec) => println!("{dec}"),
+                parser::Value::Word(s) => println!("'{s}"),
 				parser::Value::None => println!("Nothing"),
 				parser::Value::Variable(_) => unreachable!("how tf you achieved variable after eval"),
 			}

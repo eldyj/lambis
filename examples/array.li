@@ -1,12 +1,15 @@
-rest = 1
-first = 0
+left = 'left
+right = 'right
 
-arrAdd = λxra. a ${
-	first -> x
-	rest  -> r
+rest = right.
+first = left.
+
+pair = λlra. a ${
+	'left  -> l
+	'right -> r
 }.
 
-arrInit  = λx. arrAdd x ().
+arrInit  = λx. pair x ().
 arrFirst = λx. x first.
 arrRest  = λx. x rest.
 
@@ -17,7 +20,7 @@ arrLen = λx. x ${
 
 arrNth = λnx. x ${
 	() -> ()
-	x -> (n ${
+	x -> (n ${
 		0 -> (x first)
 		n -> (arrNth n-1 (x rest))
 	})
@@ -25,17 +28,37 @@ arrNth = λnx. x ${
 
 arrMap = λfx. x ${
 	() -> ()
-	x -> (arrAdd (f (x first)) (arrMap f (x rest)))
+	x -> (pair (f (x first)) (arrMap f (x rest)))
 }.
 
 arrReduce = (λfx. (λl. l ${
 	0 -> ()
-	1 -> ()
-	2 -> (f (x first) (arrNth 1 x))
+	1 -> (x first)
 	l -> (f (x first) (arrReduce f (x rest)))
 })  (arrLen x)).
 
 sum = (arrReduce (+)).
+prod = (arrReduce (*)).
 
-arr = (arrAdd 3 (arrAdd 2 (arrInit 1)))
-! (sum (arrMap (*69) arr))
+range = λse. (s < e) ${
+	true  -> (pair s (range s+1 e))
+	false -> (s > e) ${
+		true  -> (pair s (range s-1 e))
+		false -> (arrInit s)
+	}
+}.
+
+factorial = λx. (x < 0) ${
+	true  -> ()
+	false -> x ${
+		0 -> 1
+		x -> (prod (range 1 x))
+	}
+}.
+
+triangular = λx. (x < 0) ${
+	true  -> ()
+	false -> (sum (range 0 x))
+}.
+
+! (factorial 30)

@@ -1,4 +1,3 @@
-mod check;
 use std::{iter::Peekable, str::Chars};
 type Lexable<'a> = Peekable<Chars<'a>>;
 
@@ -12,8 +11,6 @@ pub enum Token {
 	CloseBracket,  // ]
 	Exclam,        // !
 	Bar,           // |
-	Apostrophe,    // '
-
 	Underscore,    // _
 	Plus,          // +
 	Minus,         // -
@@ -30,12 +27,14 @@ pub enum Token {
 	Lambda,        // λ
 	Period,        // .
 	Dollar,        // $
-        Ident(String), // [a-zA-Z0-9]+
+    Ident(String), // [a-zA-Z0-9]+
+    Word(String),  // '[a-zA-Z0-9]+
 	Integer(i128), // [0-9]+
 }
 
 trait LexableExt<'a> {
 	fn lex_ident(&mut self) -> Token;
+    fn lex_word(&mut self) -> Token;
 	fn lex_integer(&mut self) -> Token;
 	fn lex_multiline_comment(&mut self);
 	fn lex_comment(&mut self);
@@ -48,63 +47,50 @@ impl LexableExt<'_> for Lexable<'_> {
 	fn lex_ident(&mut self) -> Token {
 		let mut result: String = String::new();
 
-		while let Some(&ch) = self.peek() {
-			if !check::is_ident(ch) {
-				break
-			}
-
-			let _: Option<char> = self.next();
-			result.push(ch);
+		while self.peek().is_some_and(char::is_ascii_alphanumeric) {
+			result.push(self.next().unwrap());
 		}
 
 		Token::Ident(result)
 	}
 
+    fn lex_word(&mut self) -> Token {
+        let _: Option<char> = self.next();
+        let Token::Ident(s) = self.lex_ident() else {
+            unreachable!("urmom");
+        };
+        Token::Word(s)
+    }
+
 	fn lex_integer(&mut self) -> Token {
 		let mut temporary: String = String::new();
 
-		while let Some(&ch) = self.peek() {
-			if !check::is_numeric(ch) {
-				break
-			}
-
-			let _: Option<char> = self.next();
-			temporary.push(ch);
+		while self.peek().is_some_and(char::is_ascii_digit) {
+			temporary.push(self.next().unwrap());
 		}
 
 		Token::Integer(temporary.parse::<i128>().unwrap())
 	}
 
 	fn lex_spaces(&mut self) {
-		while let Some(&ch) = self.peek() {
-			if !check::is_space(ch) {
-				break
-			}
-
+		while self.peek().is_some_and(|&ch: &char| ch.is_ascii_whitespace()) {
 			let _: Option<char> = self.next();
 		}
 	}
 
 	fn lex_multiline_comment(&mut self) {
-		while let Some(&ch) = self.peek() {
-			let _: Option<char> = self.next();
-			if ch == '#' && self.peek() == Some(&'#') {
-				let _: Option<char> = self.next();
-				break
-			}
+        self.next();
+		while self.peek().is_some() && !(self.next().unwrap() == '#' && self.peek().is_some_and(|&ch: &char| ch == '#')) {
+            let _: Option<char> = self.next();
 		}
 	}
 
 	fn lex_comment(&mut self) {
 		let _: Option<char> = self.next();
-		if self.peek() == Some(&'#') {
+		if self.peek().is_some_and(|&ch: &char| ch == '#') {
 			self.lex_multiline_comment();
 		} else {
-			while let Some(&ch) = self.peek() {
-				if ch == '\n' {
-					break
-				}
-
+			while self.peek().is_some_and(|&ch: &char| ch != '\n') {
 				let _: Option<char> = self.next();
 			}
 		}
@@ -114,11 +100,11 @@ impl LexableExt<'_> for Lexable<'_> {
 		let mut result: Vec<Token> = vec![];
 
 		while let Some(&ch) = self.peek() {
-			if check::is_space(ch) {
+			if ch.is_ascii_whitespace() {
 				self.lex_spaces();
-			} else if check::is_ident_start(ch) {
+			} else if ch.is_ascii_alphabetic() {
 				result.push(self.lex_ident());
-			} else if check::is_numeric(ch) {
+			} else if ch.is_ascii_digit() {
 				result.push(self.lex_integer());
 			} else if ch == '#' {
 				self.lex_comment();
@@ -126,6 +112,7 @@ impl LexableExt<'_> for Lexable<'_> {
 				result.push(match ch {
 					'$' => Token::Dollar,
 					'.' => Token::Period,
+                    '\'' => self.lex_word(),
 					'<' => {
 						let mut clone: Lexable = self.clone();
 						let _: Option<char> = clone.next();
@@ -200,9 +187,8 @@ impl LexableExt<'_> for Lexable<'_> {
 					')' => Token::CloseParen,
 					'λ'|'\\' => Token::Lambda,
 					'|' => Token::Bar,
-					'\'' => Token::Apostrophe,
 					'→' => Token::Arrow,
-					 _  => return Err("LexError: what the fuck is {ch}".to_owned()),
+					 _  => return Err(format!("LexError: what the fuck is {ch}").to_owned()),
 				});
 
 				let _: Option<char> = self.next();

@@ -4,6 +4,7 @@ pub mod lexer;
 pub enum Value {
 	None,
 	Variable(String),
+    Word(String),
 	Integer(i128),
 	Decimal(f64),
 	Lambda {
@@ -457,6 +458,11 @@ impl Parseable {
 					content: body
 				}))
 			}
+
+            lexer::Token::Word(_) => {
+                let lexer::Token::Word(s): lexer::Token = self.next().unwrap() else {unreachable!("urmom")};
+                Ok(ASTNode::Value(Value::Word(s)))
+            }
 
 			lexer::Token::Integer(_) => {
 				let integer: i128 = self.consume_integer()?;
