@@ -261,13 +261,16 @@ impl Parseable {
 
 	fn parse_pair(&mut self, from_call: bool, allow_operations: bool) -> Result<ASTNode, String> {
 		let _: Option<lexer::Token> = self.next();
+        let result: ASTNode;
 
-		if self.peek() == Some(lexer::Token::CloseParen) {
-			let _: Option<lexer::Token> = self.next();
-			return Ok(ASTNode::Value(Value::None))
-		}
+		match self.peek() {
+            Some(lexer::Token::CloseParen) => {
+                let _: Option<lexer::Token> = self.next();
+                return Ok(ASTNode::Value(Value::None))
+            }
+            _ => result = self.parse_expression(false, true)?,
+        }
 
-		let result: ASTNode = self.parse_expression(false, true)?;
 		self.consume(&lexer::Token::CloseParen)?;
 
 		let res: ASTNode = if let ASTNode::Value(ref value) = result {
@@ -431,7 +434,15 @@ impl Parseable {
 		match current {
 			lexer::Token::Exclam => {
 				let _: Option<lexer::Token> = self.next();
-				Ok(ASTNode::Print(Box::new(self.parse_expression(false, true)?)))
+				Ok(if from_call {
+                    ASTNode::Value(Value::Lambda {
+                        args_def: "X".to_owned(),
+                        content: Box::new(ASTNode::Print(Box::new(
+                                    ASTNode::Value(Value::Variable("X".to_owned()))))),
+                    })
+                } else {
+                    ASTNode::Print(Box::new(self.parse_expression(false, true)?))
+                })
 			}
 
 			lexer::Token::OpenBracket => self.parse_integer_part(allow_operations),

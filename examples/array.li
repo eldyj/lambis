@@ -1,64 +1,79 @@
-left = 'left
-right = 'right
-
-rest = right.
-first = left.
+rest  = 'rest.
+first = 'first.
 
 pair = λlra. a ${
-	'left  -> l
-	'right -> r
+	'first -> l
+	'rest  -> r
 }.
 
-arrInit  = λx. pair x ().
-arrFirst = λx. x first.
-arrRest  = λx. x rest.
-
-arrLen = λx. x ${
+len = λx. x ${
 	() -> 0
-	x -> 1 + (arrLen (x rest))
+	x  -> 1 + (len (x rest))
 }.
 
-arrNth = λnx. x ${
+nth = λnx. x ${
 	() -> ()
-	x -> (n ${
+	x  -> (n ${
 		0 -> (x first)
-		n -> (arrNth n-1 (x rest))
+		n -> (nth n-1 (x rest))
 	})
 }.
 
-arrMap = λfx. x ${
+map = λfx. x ${
 	() -> ()
-	x -> (pair (f (x first)) (arrMap f (x rest)))
+	x -> (pair (f (x first)) (map f (x rest)))
 }.
 
-arrReduce = (λfx. (λl. l ${
+reduce = (λfx. (λl. l ${
 	0 -> ()
 	1 -> (x first)
-	l -> (f (x first) (arrReduce f (x rest)))
-})  (arrLen x)).
+	l -> (f (x first) (reduce f (x rest)))
+}) (len x)).
 
-sum = (arrReduce (+)).
-prod = (arrReduce (*)).
+filter = (λfx. x ${
+	() -> ()
+	x  -> ((λin. [f i] ${
+		true  -> (pair i n)
+		false -> n
+	}) (x first) (filter f (x rest)))
+}).
 
-range = λse. (s < e) ${
-	true  -> (pair s (range s+1 e))
-	false -> (s > e) ${
-		true  -> (pair s (range s-1 e))
-		false -> (arrInit s)
+range = (λse. pair s [s < e] ${
+	true  -> (range s+1 e)
+	false -> [s > e] ${
+		true  -> (range s-1 e)
+		false -> ()
 	}
+}).
+
+append = λae. a ${
+	() -> (pair e ())
+	a -> (pair (a first) (append (a rest) e))
 }.
 
-factorial = λx. (x < 0) ${
-	true  -> ()
-	false -> x ${
-		0 -> 1
-		x -> (prod (range 1 x))
-	}
+concat = λab. b ${
+	() -> a
+	b -> (concat (append a (b first)) (b rest))
 }.
 
-triangular = λx. (x < 0) ${
-	true  -> ()
-	false -> (sum (range 0 x))
+concat3 = (λabc. concat (concat a b) c).
+concat4 = (λabcd. concat (concat3 a b c) d).
+concat5 = (λabcde. concat (concat4 a b c d) e).
+concat6 = (λabcdef. concat (concat5 a b c d e) f).
+concat7 = (λabcdefg. concat (concat6 a b c d e f) g).
+
+reverse = λa. a ${
+	() -> ()
+	a -> (append (reverse (a rest)) (a first))
 }.
 
-! (factorial 30)
+sum = (reduce (+)).
+prod = (reduce (*)).
+
+positive = (> 0).
+negative = (< 0).
+zero     = (= 0).
+integer  = (λX. {X}=0).
+even     = (λx. integer x/2).
+
+map ! (filter even (range 0-10 10))
